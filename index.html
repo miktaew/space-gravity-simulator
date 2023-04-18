@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<head>
+
+</head>
+<body>
+    <canvas id = "canvas" width = "1200" height = "1200">
+
+    </canvas>
+
+    <script>
+
+        const speedScale = 0.3; //multiplier for speeds, just to not go into stupidly tiny fractions
+        const sizeScale = 10; //make distances larger than displayed
+
+
+        const fps = 250; //frames per second (animation speed)
+
+        const canvas = document.getElementById("canvas");
+        
+        const ctx = canvas.getContext("2d");
+        const star = {
+            x: 600,
+            y: 400,
+            mass: 100,
+            radius: 20,
+            color: "orange",
+            speedX: 0,
+            speedY: 0,
+            tail: []
+        }
+
+        const smallPlanet = {
+            x: 550,
+            y: 400,
+            mass: 0.05,
+            radius: 2,
+            color: "blue",
+            speedX: 0,
+            speedY: 3,
+            tail: []
+        }
+
+        const largePlanet = {
+            x: 350,
+            y: 400,
+            mass: 0.1,
+            radius: 10,
+            color: "brown",
+            speedX: 0,
+            speedY: 3,
+            tail: []
+        }
+
+        const largePlanet2 = {
+            x: 1000,
+            y: 400,
+            mass: 0.1,
+            radius: 10,
+            color: "purple",
+            speedX: 0,
+            speedY: 3,
+            tail: []
+        }
+
+        const celestialBodies = [star, smallPlanet, largePlanet, largePlanet2];
+
+        
+        setInterval(()=>{
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for(let i = 0; i < celestialBodies.length; i++) {
+                calculatePosition(celestialBodies[i]);
+                drawBody(celestialBodies[i]);
+            }
+        }, 1000/fps);
+
+        function drawBody(celestialBody) {
+            ctx.beginPath();
+            ctx.fillStyle = celestialBody.color;
+            ctx.arc(celestialBody.x, celestialBody.y, celestialBody.radius, 0, 2*Math.PI);
+
+            ctx.fill();
+            ctx.stroke();
+            
+            //draw a tail
+            for(let i = 0; i < celestialBody.tail.length; i++) {
+                ctx.fillStyle = celestialBody.color;
+                ctx.beginPath();
+                ctx.rect(celestialBody.tail[i][0], celestialBody.tail[i][1], 1, 1); 
+                ctx.fill();
+            }
+
+        }
+
+        //calculates and modifies position of each body, based on all other bodies (distances and masses)
+        function calculatePosition(celestialBody) {
+            for(let i = 0; i < celestialBodies.length; i++) {
+                if(celestialBody === celestialBodies[i]) {
+                    continue;
+                }
+
+                //direction vector
+                const directionV = [celestialBodies[i].x-celestialBody.x, celestialBodies[i].y-celestialBody.y];
+                
+                //distance
+                const vLength = sizeScale*(directionV[0]**2 + directionV[1]**2)**.5;
+
+                //acceleration
+                const acc = (celestialBodies[i].mass / vLength) / speedScale;
+
+                //normalized vector for proper X and Y speeds
+                const directionV_normalized = [directionV[0]/vLength, directionV[1]/vLength];
+
+                celestialBody.speedX += directionV_normalized[0]*acc;
+                celestialBody.speedY += directionV_normalized[1]*acc;
+            }
+
+            if(celestialBody.tail.length >= Math.min(celestialBody.radius*40, 400)) {
+                celestialBody.tail.shift();
+            }
+            celestialBody.tail.push([celestialBody.x, celestialBody.y]);
+
+            celestialBody.x += celestialBody.speedX * speedScale;
+            celestialBody.y += celestialBody.speedY * speedScale;
+            
+        }
+    </script>
+</body>
