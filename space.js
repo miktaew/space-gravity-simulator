@@ -1,7 +1,8 @@
 const speedScale = 0.33; //multiplier for speeds, just to not go into stupidly tiny fractions
 const sizeScale = 1; //make distances larger than displayed; only for gravity calculations, to slow the movement change speedScale
 
-const fps = 60; //frames per second (animation speed)
+const physicsFPS = 120; //frames per second (physics)
+const animationFPS = 60; //frames per second (animation)
 
 const tails = true; //if it should draw "tails" of the moving objects
 const tail_size = 60; //length of the tail (in frames of animation)
@@ -82,8 +83,6 @@ let removed_bodies = [];
 let already_collided = [];
 
 const simulation = setInterval(()=>{
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     //remove stuff that got collided in previous round
     for(let i = 0; i < removed_bodies.length; i++) {
         celestialBodies = celestialBodies.filter((_, index) => !removed_bodies.includes(index));
@@ -97,9 +96,17 @@ const simulation = setInterval(()=>{
             continue;
         }
         calculatePosition(celestialBodies[i],i);
+    }
+}, 1000/physicsFPS);
+
+
+const animation = setInterval(()=> {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i = 0; i < celestialBodies.length; i++) {
         drawBody(celestialBodies[i]);
     }
-}, 1000/fps);
+
+}, 1000/animationFPS);
 
 function drawBody(celestialBody) {
     ctx.beginPath();
