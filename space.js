@@ -1,7 +1,8 @@
-const speedScale = 0.33; //multiplier for speeds, just to not go into stupidly tiny fractions
-const sizeScale = 1; //make distances larger than displayed; only for gravity calculations, to slow the movement change speedScale
+const timeScale = 1; //make things faster/slower
+const distanceScale = 0.5; //make distances larger/smaller than displayed
+const sizeScale = 1; //make sizes larger/smaller than displayed
 
-const physicsFPS = 120; //frames per second (physics)
+const physicsFPS = 120; //frames per second (physics), directly translates to simulation speed
 const animationFPS = 60; //frames per second (animation)
 
 const tails = true; //if it should draw "tails" of the moving objects
@@ -56,10 +57,10 @@ const moon = new SpaceObject({
 });
 
 const largePlanet2 = new SpaceObject({
-    x: 1000,
+    x: 900,
     y: 400,
     speedX: 0,
-    speedY: 1.8,
+    speedY: -1.8,
 });
 
 let celestialBodies = [star, smallPlanet, largePlanet, largePlanet2, moon];
@@ -76,7 +77,7 @@ function addRandomBodies(){
     }
 }
 
-addRandomBodies();
+//addRandomBodies();
 
 //store bodies that got absorbed to skip them in current frame and to not collide them again (just in opposite order)
 let removed_bodies = [];
@@ -156,10 +157,10 @@ function calculatePosition(celestialBody,index) {
             const directionV = [celestialBodies[i].x-celestialBody.x, celestialBodies[i].y-celestialBody.y];
             
             //distance
-            const vLength = sizeScale*(directionV[0]**2 + directionV[1]**2)**.5;
+            const vLength = distanceScale*(directionV[0]**2 + directionV[1]**2)**.5;
 
             //acceleration
-            const acc = (celestialBodies[i].mass / vLength**2) / speedScale;
+            const acc = (celestialBodies[i].mass / vLength**2) * timeScale;
 
             //normalized vector for proper X and Y speeds
             const directionV_normalized = [directionV[0]/vLength, directionV[1]/vLength];
@@ -177,14 +178,14 @@ function calculatePosition(celestialBody,index) {
         celestialBody.tail.push([celestialBody.x, celestialBody.y]);
     }
 
-    celestialBody.x += celestialBody.speedX * speedScale;
-    celestialBody.y += celestialBody.speedY * speedScale;  
+    celestialBody.x += celestialBody.speedX*timeScale;
+    celestialBody.y += celestialBody.speedY*timeScale;  
 }
 
-//check if two space bodies are touching each other 
+//check if two space bodies are touching each other properly (not just brushing)
 function checkCollision(object_a, object_b) {
-    const distance = ((object_a.x - object_b.x)**2 + (object_a.y - object_b.y)**2)**0.5;
-    if(distance < object_a.radius + object_b.radius) {
+    const distance = (((object_a.x - object_b.x)**2 + (object_a.y - object_b.y)**2)**0.5)/distanceScale;
+    if(distance < ((object_a.radius + object_b.radius)/2)/sizeScale) {
         return true;
     }
     return false;
