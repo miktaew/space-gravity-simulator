@@ -22,15 +22,25 @@
         <label for="tailsize">Max tail length (affects performance):</label> <br>
         <input id="tailsize" name="tailsize" value="60">
         <br><br>
-        <label for="bounce">Enable bouncing from border:</label> <br>
-        <input id="bounce" name="bounce" type="checkbox">
+        
+        <input id="bounce" name="bounce" type="checkbox"> 
+        <label for="bounce">Enable bouncing from border</label> <br><br>
+        <fieldset>
+            Choose a scenario:<br>
+            <input type="radio" id="Basic" name="scenario" value="basic" checked>
+            <label for="Basic">Basic system</label><br>
+            <input type="radio" id="Balanced" name="scenario" value="balanced">
+            <label for="Balanced">Balanced</label><br>
+            <input type="radio" id="Random" name="scenario" value="random">
+            <label for="Random">Chaos</label><br>
+        </fieldset>
     </div>
 
     <script>
 
-const timeScale = 1; //make things faster/slower
-const distanceScale = 0.5; //make distances larger/smaller than displayed
-const sizeScale = 1; //make sizes larger/smaller than displayed
+const timeScale = 4; //make things faster/slower
+const distanceScale = 4; //make distances larger/smaller than displayed
+const sizeScale = 0.75; //make sizes larger/smaller than displayed
 
 const physicsFPS = 120; //frames per second (physics), directly translates to simulation speed
 const animationFPS = 60; //frames per second (animation)
@@ -38,7 +48,7 @@ const animationFPS = 60; //frames per second (animation)
 const tails = true; //if it should draw "tails" of the moving objects
 let tail_size = 60; //length of the tail (in frames of animation)
 
-let bounce = false;
+let bounce_enabled = false;
 
 const canvas = document.getElementById("canvas");
 
@@ -49,7 +59,7 @@ class SpaceObject{
         this.x = x;
         this.y = y;
         this.mass = mass;
-        this.radius = radius || 4*mass**0.5;
+        this.radius = radius || calc_radius(mass);
         this.color = chooseColor(mass);
         this.speedX = speedX;
         this.speedY = speedY;
@@ -60,24 +70,24 @@ class SpaceObject{
 const star = new SpaceObject({
     x: 600,
     y: 400,
-    mass: 100,
+    mass: 1000,
     speedX: 0,
     speedY: 0,
 });
 
 const smallPlanet = new SpaceObject({
-    x: 550,
+    x: 530,
     y: 400,
     mass: 0.5,
     speedX: 0,
-    speedY: 5,
+    speedY: .5,
 });
 
 const largePlanet = new SpaceObject({
     x: 350,
     y: 400,
     speedX: 0,
-    speedY: 2,
+    speedY: .2,
 });
 
 const moon = new SpaceObject({
@@ -85,26 +95,62 @@ const moon = new SpaceObject({
     y: 400,
     mass: 0.1,
     speedX: 0,
-    speedY: 0.9,
+    speedY: 0.16,
 });
 
 const largePlanet2 = new SpaceObject({
-    x: 900,
+    x: 150,
     y: 400,
     speedX: 0,
-    speedY: -1.8,
+    speedY: -0.18,
 });
 
-let celestialBodies = [star, smallPlanet, largePlanet, largePlanet2, moon];
+const smallPlanet2 = new SpaceObject({
+    x: 250,
+    y: 400,
+    mass: 0.5,
+    speedX: 0,
+    speedY: -0.15,
+});
+
+const twinPlanet = new SpaceObject({
+    x: 500,
+    y: 400,
+    speedX: 0,
+    speedY: .4,
+});
+const twinPlanet2 = new SpaceObject({
+    x: 700,
+    y: 400,
+    speedX: 0,
+    speedY: -.4,
+});
+const twinPlanet3 = new SpaceObject({
+    x: 600,
+    y: 500,
+    speedX: 0.4,
+    speedY: 0,
+});
+const twinPlanet4 = new SpaceObject({
+    x: 600,
+    y: 300,
+    speedX: -0.4,
+    speedY: 0,
+});
+
+const basic_setup = [star, smallPlanet, smallPlanet2, largePlanet, largePlanet2, moon];
+const balanced_setup = [star, twinPlanet, twinPlanet2, twinPlanet3, twinPlanet4];
+
+let celestialBodies = basic_setup;
 
 function addRandomBodies(){
     for(let i = 1; i <= 1000; i++) {
         celestialBodies.push(new SpaceObject({
             x: 1200*Math.random(),
             y: 900*Math.random(),
-            mass: 0.5*Math.random(),
-            speedX: 2-4*Math.random(),
-            speedY: 2-4*Math.random(),
+            mass: 0.5,
+            speedX: .2-.4*Math.random(),
+            speedY: .2-.4*Math.random(),
         }));
     }
 }
@@ -173,38 +219,38 @@ function calculatePosition(celestialBody,index) {
         //if so, launch .collide() and skip
         //otherwise continue normally
         
-        if(!(already_collided.filter((arr)=>arr[0]==i && arr[1]==index).length)) {
-            
-            const collided = checkCollision(celestialBody, celestialBodies[i]);
+            if(!(already_collided.filter((arr)=>arr[0]==i && arr[1]==index).length)) {
+                
+                const collided = checkCollision(celestialBody, celestialBodies[i])
 
-            if(collided) {
-                collide(celestialBody, celestialBodies[i]);                
-                removed_bodies.push(i);
-                already_collided.push([index,i]);
-                continue;
+                if(collided) {
+                    collide(celestialBody, celestialBodies[i]);                
+                    removed_bodies.push(i);
+                    already_collided.push([index,i]);
+                    continue;
+                }
+
+                //direction vector
+                const directionV = [celestialBodies[i].x-celestialBody.x, celestialBodies[i].y-celestialBody.y];
+                
+                //distance
+                const vLength = Math.max(0.5,distanceScale*(directionV[0]**2 + directionV[1]**2)**.5);
+
+                //acceleration
+                const acc = (celestialBodies[i].mass / vLength**2) * timeScale;
+
+                //normalized vector for proper X and Y speeds
+                const directionV_normalized = [directionV[0]/vLength, directionV[1]/vLength];
+
+                celestialBody.speedX += directionV_normalized[0]*acc;
+                celestialBody.speedY += directionV_normalized[1]*acc;
             }
         
-
-            //direction vector
-            const directionV = [celestialBodies[i].x-celestialBody.x, celestialBodies[i].y-celestialBody.y];
-            
-            //distance
-            const vLength = distanceScale*(directionV[0]**2 + directionV[1]**2)**.5;
-
-            //acceleration
-            const acc = (celestialBodies[i].mass / vLength**2) * timeScale;
-
-            //normalized vector for proper X and Y speeds
-            const directionV_normalized = [directionV[0]/vLength, directionV[1]/vLength];
-
-            celestialBody.speedX += directionV_normalized[0]*acc;
-            celestialBody.speedY += directionV_normalized[1]*acc;
-        }
     }
 
     if(tails) 
     {    
-        while(celestialBody.tail.length >= tail_size) {
+        while(celestialBody.tail.length >= tail_size && celestialBody.tail.length > 0) {
             celestialBody.tail.shift();
         }
         celestialBody.tail.push([celestialBody.x, celestialBody.y]);
@@ -212,7 +258,7 @@ function calculatePosition(celestialBody,index) {
 
     celestialBody.x += celestialBody.speedX*timeScale;
     celestialBody.y += celestialBody.speedY*timeScale;
-    if(bounce) {
+    if(bounce_enabled) {
         if(celestialBody.x - celestialBody.radius <= 0){
             celestialBody.speedX *= -1;
             celestialBody.x = celestialBody.radius;
@@ -232,8 +278,8 @@ function calculatePosition(celestialBody,index) {
 
 //check if two space bodies are touching each other properly (not just brushing)
 function checkCollision(object_a, object_b) {
-    const distance = (((object_a.x - object_b.x)**2 + (object_a.y - object_b.y)**2)**0.5)/distanceScale;
-    if(distance < ((object_a.radius + object_b.radius)/2)/sizeScale) {
+    const distance = (((object_a.x - object_b.x)**2 + (object_a.y - object_b.y)**2)**0.5)*distanceScale;
+    if(distance < ((object_a.radius + object_b.radius)/2)*sizeScale) {
         return true;
     }
     return false;
@@ -256,7 +302,11 @@ function collide(object_a, object_b) {
     object_a.mass = new_mass;
     object_a.speedX = object_a.speedX * mass_ratio_a + object_b.speedX * mass_ratio_b;
     object_a.speedY = object_a.speedY * mass_ratio_a + object_b.speedY * mass_ratio_b;
-    object_a.radius = 4*object_a.mass**0.3333;
+    object_a.radius = calc_radius(object_a.mass);
+}
+
+function calc_radius(mass) {
+    return 4*mass**0.3333;
 }
 
 function chooseColor(mass) {
@@ -285,7 +335,25 @@ document.getElementById("tailsize").addEventListener("change", ()=> {
    tail_size = Number.parseInt(document.getElementById("tailsize").value);
 });
 document.getElementById("bounce").addEventListener("change", ()=> {
-   bounce = document.getElementById("bounce").checked;
+   bounce_enabled = document.getElementById("bounce").checked;
+});
+
+
+document.getElementById("Basic").addEventListener("change", (event)=> {
+   if(event.target.checked) {
+    celestialBodies = basic_setup;
+   }
+});
+document.getElementById("Balanced").addEventListener("change", (event)=> {
+    if(event.target.checked) {
+        celestialBodies = balanced_setup;
+    }
+});
+document.getElementById("Random").addEventListener("change", (event)=> {
+    if(event.target.checked) {
+        celestialBodies = [];
+        addRandomBodies();
+    }
 });
     </script>
 </body>
